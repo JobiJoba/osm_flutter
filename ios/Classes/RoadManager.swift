@@ -2,15 +2,12 @@
 // Created by Dali on 6/20/21.
 //
 
-import Foundation
 import Alamofire
-import MapKit
 import Polyline
 import TangramMap
 
 typealias ParserJson = ([String: Any?]?) -> Road
 typealias RoadHandler = (Road?) -> Void
-
 
 enum RoadType: String {
     case car = "routed-car"
@@ -18,25 +15,19 @@ enum RoadType: String {
     case foot = "routed-foot"
 }
 
-
 protocol PRoadManager {
-
-
     func getRoad(wayPoints: [String], typeRoad: RoadType, handler: @escaping RoadHandler)
 
     func drawRoadOnMap(roadKey: String, on road: Road, for map: TGMapView, roadInfo: RoadInformation?, polyLine: Polyline?) -> TGRoute
-    
-    func roadContainCLLocationCoordinate2D(location:CLLocationCoordinate2D) -> RoadFolder?
+
+    func roadContainCLLocationCoordinate2D(location: CLLocationCoordinate2D) -> RoadFolder?
     func hasPolylineAsDatalayer() -> Bool
     func hasPolylineAsMarker() -> Bool
     func hasRoads() -> Bool
 }
 
 class RoadManager: PRoadManager {
-   
-  
-
-    public let MANEUVERS: Dictionary<String, Int> = [
+    public let MANEUVERS: [String: Int] = [
         "new name": 2,
         "turn-straight": 1,
         "turn-slight right": 6,
@@ -69,8 +60,8 @@ class RoadManager: PRoadManager {
         "ramp-right": 18,
         "ramp-sharp right": 18,
         "ramp-slight right": 18,
-        "ramp-straight": 19
-    ];
+        "ramp-straight": 19,
+    ]
 
     public let DIRECTIONS = [
         1: ["en": "Continue[ on %s]", "de": ""],
@@ -97,28 +88,26 @@ class RoadManager: PRoadManager {
         34: ["en": "Enter roundabout and leave at eighth exit[ on %s]", "de": ""],
     ]
 
-    private var road: Road? = nil
-    private var lastMarkerRoad: RoadFolder? = nil
-    private(set) var roads: [RoadFolder] = [RoadFolder]()
+    private var road: Road?
+    private var lastMarkerRoad: RoadFolder?
+    private(set) var roads: [RoadFolder] = .init()
 
     init() {}
 
-
     public func clearRoads(for map: TGMapView) {
-        if (lastMarkerRoad != nil) {
-            //map.markerRemove(lastMarkerRoad!.tgRouteMarker)
+        if lastMarkerRoad != nil {
+            // map.markerRemove(lastMarkerRoad!.tgRouteMarker)
             if lastMarkerRoad!.tgRouteLayer.tgPolyline != nil {
                 lastMarkerRoad!.tgRouteLayer.tgPolyline?.dataLayer!.remove()
-            }else if lastMarkerRoad!.tgRouteLayer.tgMarkerPolyline != nil {
+            } else if lastMarkerRoad!.tgRouteLayer.tgMarkerPolyline != nil {
                 map.markerRemove(lastMarkerRoad!.tgRouteLayer.tgMarkerPolyline!)
             }
-           
         }
         if !roads.isEmpty && roads.count > 1 {
             roads.forEach { folder in
-                if folder !=  lastMarkerRoad {
-                    //map.markerRemove(folder.tgRouteMarker)
-                    removeRoadFolder(folder: folder, for: map,deleteFromRoads: false)
+                if folder != lastMarkerRoad {
+                    // map.markerRemove(folder.tgRouteMarker)
+                    removeRoadFolder(folder: folder, for: map, deleteFromRoads: false)
                 }
             }
         }
@@ -142,11 +131,11 @@ class RoadManager: PRoadManager {
         }
     }
 
-    func removeRoadFolder(folder: RoadFolder, for map: TGMapView,deleteFromRoads:Bool = true) {
-        //map.markerRemove(folder.tgRouteMarker)
+    func removeRoadFolder(folder: RoadFolder, for map: TGMapView, deleteFromRoads: Bool = true) {
+        // map.markerRemove(folder.tgRouteMarker)
         if folder.tgRouteLayer.tgPolyline != nil {
             folder.tgRouteLayer.tgPolyline?.dataLayer!.remove()
-        }else if folder.tgRouteLayer.tgMarkerPolyline != nil {
+        } else if folder.tgRouteLayer.tgMarkerPolyline != nil {
             map.markerRemove(folder.tgRouteLayer.tgMarkerPolyline!)
         }
         if deleteFromRoads {
@@ -156,29 +145,29 @@ class RoadManager: PRoadManager {
             }
         }
     }
-    
+
     func hasRoads() -> Bool {
         !roads.isEmpty
     }
-    
+
     func hasPolylineAsDatalayer() -> Bool {
         return roads.onlyTGGeoPolylinePoylines().count > 0
     }
-    
+
     func hasPolylineAsMarker() -> Bool {
         return roads.onlyTGMarkerPoylines().count == roads.count
     }
-    
+
     func roadContainCLLocationCoordinate2D(location: CLLocationCoordinate2D) -> RoadFolder? {
-        var road:RoadFolder? = nil
+        var road: RoadFolder?
         if hasPolylineAsDatalayer() {
-            let roadFolder =  roads.filter({road in
+            let roadFolder = roads.filter { road in
                 road.tgRouteLayer.tgPolyline != nil
-            })
-            let roadPoyline = roadFolder.first(where: {road in
+            }
+            let roadPoyline = roadFolder.first(where: { road in
                 let contain = road.tgRouteLayer.tgPolyline!.contains(coordinate: location, geodesic: false)
                 if !contain {
-                   return road.tgRouteLayer.tgPolyline!.isOnPath(coordinate: location, geodesic: false,tolerance: 3.0)
+                    return road.tgRouteLayer.tgPolyline!.isOnPath(coordinate: location, geodesic: false, tolerance: 3.0)
                 }
                 return contain
             })
@@ -186,11 +175,11 @@ class RoadManager: PRoadManager {
         }
         return road
     }
-    
+
     public func drawRoadOnMap(roadKey: String, on road: Road, for map: TGMapView, roadInfo: RoadInformation?, polyLine: Polyline? = nil) -> TGRoute {
-        var routeLayer = createRouteLayer(road: road,polyLine: polyLine, for: map)
+        var routeLayer = createRouteLayer(road: road, polyLine: polyLine, for: map)
         let folder = RoadFolder(id: roadKey, tgRouteLayer: routeLayer, roadInformation: roadInfo)
-        self.roads.append(folder)
+        roads.append(folder)
         lastMarkerRoad = folder
         return routeLayer
     }
@@ -202,23 +191,25 @@ class RoadManager: PRoadManager {
             self.roads.append(RoadFolder(id: key, tgRouteLayer: routeLayer, roadInformation: nil))
         }
     }
+
     /// createTGMarkerPoyline
-    private func createTGMarkerPoyline(road: Road,polyLine: Polyline? = nil ,for map: TGMapView)->TGMarker {
+    private func createTGMarkerPoyline(road: Road, polyLine: Polyline? = nil, for map: TGMapView) -> TGMarker {
         var route = polyLine
-        if (route == nil) {
+        if route == nil {
             route = Polyline(encodedPolyline: road.mRouteHigh, precision: 1e5)
         }
         let marker = map.markerAdd()
-         marker.stylingString = "{ style: 'lines',interactive: true, color: '\(road.roadData.roadColor)', width: \(road.roadData.roadWidth), outline : { color: '\(road.roadData.roadBorderColor)', width: '\(road.roadData.roadBorderWidth)' } , order: 900 }"
-         
-         let tgPolyline = TGGeoPolyline(coordinates: route!.coordinates!, count: UInt(route!.coordinates!.count))
-         marker.polyline = tgPolyline
+        marker.stylingString = "{ style: 'lines',interactive: true, color: '\(road.roadData.roadColor)', width: \(road.roadData.roadWidth), outline : { color: '\(road.roadData.roadBorderColor)', width: '\(road.roadData.roadBorderWidth)' } , order: 900 }"
+
+        let tgPolyline = TGGeoPolyline(coordinates: route!.coordinates!, count: UInt(route!.coordinates!.count))
+        marker.polyline = tgPolyline
         return marker
     }
+
     /// createTGPolylineLayer
-    private func createTGPolylineLayer(road: Road,polyLine: Polyline? = nil ,for map: TGMapView)->TGPolyline {
+    private func createTGPolylineLayer(road: Road, polyLine: Polyline? = nil, for map: TGMapView) -> TGPolyline {
         var route = polyLine
-        if (route == nil) {
+        if route == nil {
             route = Polyline(encodedPolyline: road.mRouteHigh, precision: 1e5)
         }
         var tgGeoPolyline = TGGeoPolyline(coordinates: route!.coordinates!, count: UInt(route!.coordinates!.count))
@@ -229,20 +220,21 @@ class RoadManager: PRoadManager {
             "outlineColor": road.roadData.roadBorderColor,
             "outlineWidth": road.roadData.roadBorderWidth,
         ]
-        
+
         var feature = TGMapFeature(polyline: tgGeoPolyline, properties: properties)
         var mapData = map.addDataLayer("route_line", generateCentroid: false)
         mapData?.setFeatures([feature])
-        return TGPolyline(dataLayer: mapData,tgPolyline: tgGeoPolyline,coordinates: route!.coordinates!)
+        return TGPolyline(dataLayer: mapData, tgPolyline: tgGeoPolyline, coordinates: route!.coordinates!)
     }
+
     /// createRouteLayer
-    private func createRouteLayer(road: Road,polyLine: Polyline? = nil ,for map: TGMapView)->TGRoute {
-        var tgPolyline:TGPolyline?
-        var tgMarker:TGMarker?
+    private func createRouteLayer(road: Road, polyLine: Polyline? = nil, for map: TGMapView) -> TGRoute {
+        var tgPolyline: TGPolyline?
+        var tgMarker: TGMarker?
         if road.distance > 9.9 {
-            tgPolyline = createTGPolylineLayer(road: road,polyLine: polyLine,for: map)
-        }else {
-            tgMarker = createTGMarkerPoyline(road: road,polyLine: polyLine, for: map)
+            tgPolyline = createTGPolylineLayer(road: road, polyLine: polyLine, for: map)
+        } else {
+            tgMarker = createTGMarkerPoyline(road: road, polyLine: polyLine, for: map)
         }
         return TGRoute(tgPolyline: tgPolyline, tgMarkerPolyline: tgMarker)
     }
@@ -252,11 +244,11 @@ class RoadManager: PRoadManager {
         guard let url = Bundle(for: type(of: self)).url(forResource: "en", withExtension: "json") else {
             return print("File not found")
         }
-        var contentLangEn: [String:Any] = [String:Any]()
+        var contentLangEn = [String: Any]()
         do {
             let data = try String(contentsOf: url).data(using: .utf8)
             contentLangEn = parse(jsonData: data)
-        } catch let error {
+        } catch {
             print(error)
         }
 
@@ -277,15 +269,13 @@ class RoadManager: PRoadManager {
         }
     }
 
-
     func buildURL(_ waysPoints: [String], _ typeRoad: String, alternative: Bool = false) -> String {
         let serverBaseURL = "https://routing.openstreetmap.de/\(typeRoad)/route/v1/driving/"
-        let points = waysPoints.reduce("") { (result, s) in
+        let points = waysPoints.reduce("") { result, s in
             "\(result);\(s)"
         }
         var stringWayPoint = points
         stringWayPoint.removeFirst()
-
 
         return "\(serverBaseURL)\(stringWayPoint)?alternatives=\(alternative)&overview=full&steps=true"
     }
@@ -301,8 +291,8 @@ class RoadManager: PRoadManager {
         }
     }
 
-    private func parserRoad(json: [String: Any?], instructionResource: [String:Any]) -> Road {
-        var road: Road = Road()
+    private func parserRoad(json: [String: Any?], instructionResource: [String: Any]) -> Road {
+        var road = Road()
         if json.keys.contains("routes") {
             let routes = json["routes"] as! [[String: Any?]]
             routes.forEach { route in
@@ -310,28 +300,28 @@ class RoadManager: PRoadManager {
                 road.duration = route["duration"] as! Double
                 road.mRouteHigh = route["geometry"] as! String
                 let jsonLegs = route["legs"] as! [[String: Any]]
-                jsonLegs.enumerated().forEach { indexLeg,jLeg in
-                    var legR: RoadLeg = RoadLeg()
+                jsonLegs.enumerated().forEach { indexLeg, jLeg in
+                    var legR = RoadLeg()
                     legR.distance = (jLeg["distance"] as! Double) / 1000
                     legR.duration = jLeg["duration"] as! Double
 
                     let jsonSteps = jLeg["steps"] as! [[String: Any?]]
                     var lastName = ""
-                    var lastNode: RoadNode? = nil
-                    jsonSteps.enumerated().forEach { index,step in
+                    var lastNode: RoadNode?
+                    jsonSteps.enumerated().forEach { _, step in
                         let maneuver = (step["maneuver"] as! [String: Any?])
                         let location = maneuver["location"] as! [Double]
                         var node = RoadNode(
-                                location: CLLocationCoordinate2D(
-                                        latitude: (location)[1],
-                                        longitude: (location)[0]
-                                )
+                            location: CLLocationCoordinate2D(
+                                latitude: location[1],
+                                longitude: location[0]
+                            )
                         )
                         node.distance = (step["distance"] as! Double) / 1000
                         node.duration = step["duration"] as! Double
                         let roadStep = RoadStep(json: step)
-                        node.instruction = roadStep.buildInstruction(instructions: instructionResource,options: [
-                            "legIndex":indexLeg , "legCount" : jsonLegs.count - 1
+                        node.instruction = roadStep.buildInstruction(instructions: instructionResource, options: [
+                            "legIndex": indexLeg, "legCount": jsonLegs.count - 1,
                         ])
                         if lastNode != nil && roadStep.maneuver.maneuverType == "new name" && lastName == roadStep.name {
                             lastNode?.duration += node.duration
@@ -341,29 +331,23 @@ class RoadManager: PRoadManager {
                             lastNode = node
                             lastName = roadStep.name
                         }
-
-
                     }
-
                 }
             }
         }
         return road
-
     }
-    private func parse(jsonData: Data?) -> [String:Any] {
+
+    private func parse(jsonData: Data?) -> [String: Any] {
         if jsonData == nil {
-            return [String:Any]()
+            return [String: Any]()
         }
         do {
             let decodedData = try JSONSerialization.jsonObject(with: jsonData!)
-            return decodedData as! [String:Any]
+            return decodedData as! [String: Any]
         } catch {
             print("decode error")
         }
-        return [String:Any]()
+        return [String: Any]()
     }
-
-
- }
-
+}

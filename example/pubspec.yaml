@@ -1,6 +1,7 @@
 name: flutter_osm_plugin_example
+version: 1.0.30+30
 description: Demonstrates how to use the flutter_osm_plugin plugin.
-publish_to: 'none'
+publish_to: "none"
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -23,14 +24,11 @@ dependency_overrides:
   flutter_osm_plugin: #^0.60.1
     path: ../
 
-  
-
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -38,7 +36,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-     - asset/
+    - asset/
   #  - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
